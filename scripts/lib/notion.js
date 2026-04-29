@@ -64,26 +64,53 @@ export function rowToProperties({ filename, attachmentId, originalUrl, format, w
   return props;
 }
 
+async function withRetry(fn, label = 'notion') {
+  const maxAttempts = 5;
+  let lastErr;
+  for (let i = 1; i <= maxAttempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const msg = err?.message ?? '';
+      const transient = /ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|fetch failed|timed out|429|502|503|504|socket hang up/i.test(msg)
+        || err?.code === 'notionhq_client_request_timeout'
+        || err?.status >= 500
+        || err?.status === 429;
+      if (!transient || i === maxAttempts) throw err;
+      const delay = Math.min(30_000, 1000 * 2 ** (i - 1)) + Math.floor(Math.random() * 500);
+      console.warn(`  ${label} retry ${i}/${maxAttempts - 1} after ${delay}ms: ${msg.slice(0, 100)}`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 export async function findByAttachmentId(client, databaseId, attachmentId) {
-  const res = await client.databases.query({
-    database_id: databaseId,
-    filter: { property: 'Attachment ID', number: { equals: attachmentId } },
-    page_size: 1,
-  });
-  return res.results[0] ?? null;
+  return withRetry(async () => {
+    const res = await client.databases.query({
+      database_id: databaseId,
+      filter: { property: 'Attachment ID', number: { equals: attachmentId } },
+      page_size: 1,
+    });
+    return res.results[0] ?? null;
+  }, 'notion.query');
 }
 
 export async function upsertImage(client, databaseId, payload) {
   const existing = await findByAttachmentId(client, databaseId, payload.attachmentId);
   const properties = rowToProperties(payload);
   if (existing) {
-    await client.pages.update({ page_id: existing.id, properties });
+    await withRetry(
+      () => client.pages.update({ page_id: existing.id, properties }),
+      'notion.update'
+    );
     return { id: existing.id, created: false, status: payload.status };
   }
-  const created = await client.pages.create({
+  const created = await withRetry(() => client.pages.create({
     parent: { database_id: databaseId },
     properties,
-  });
+  }), 'notion.create');
   return { id: created.id, created: true, status: payload.status };
 }
 
