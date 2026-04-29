@@ -1,0 +1,69 @@
+name: Convert Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      format_filter:
+        description: 'Filter by source format (avif, png, jpeg) or leave blank for all'
+        required: false
+        default: ''
+      limit:
+        description: 'Optional cap on number of images to process'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Build CLI args
+        id: args
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.format_filter }}" ]; then
+            ARGS="$ARGS --format ${{ inputs.format_filter }}"
+          fi
+          if [ -n "${{ inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ inputs.limit }}"
+          fi
+          echo "value=$ARGS" >> "$GITHUB_OUTPUT"
+
+      - name: Run conversion
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          GITHUB_REPO_RAW_BASE: https://raw.githubusercontent.com/${{ github.repository }}/main/webp-library
+          CI: 'true'
+        run: node scripts/convert-images.js ${{ steps.args.outputs.value }}
+
+      - name: Upload conversion log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conversion-log-${{ github.run_id }}
+          path: logs/*.json
+          retention-days: 30

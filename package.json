@@ -1,0 +1,26 @@
+{
+  "name": "ara-web-image-library",
+  "version": "0.1.0",
+  "description": "Convert reyeslaw.com images (AVIF/PNG/JPEG) to WebP and index them in a Notion database.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup:notion": "node scripts/setup-notion-db.js",
+    "convert": "node scripts/convert-images.js",
+    "convert:avif": "node scripts/convert-images.js --format avif",
+    "convert:png": "node scripts/convert-images.js --format png",
+    "convert:jpeg": "node scripts/convert-images.js --format jpeg",
+    "smoke": "node scripts/convert-images.js --limit 5 --format avif --no-commit"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^16.4.5",
+    "p-limit": "^5.0.0",
+    "sharp": "^0.33.5",
+    "slugify": "^1.6.6",
+    "xlsx": "^0.18.5"
+  }
+}
