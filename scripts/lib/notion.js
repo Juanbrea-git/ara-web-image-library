@@ -65,7 +65,7 @@ export function rowToProperties({ filename, attachmentId, originalUrl, format, w
 }
 
 async function withRetry(fn, label = 'notion') {
-  const maxAttempts = 5;
+  const maxAttempts = 10;
   let lastErr;
   for (let i = 1; i <= maxAttempts; i++) {
     try {
@@ -73,12 +73,16 @@ async function withRetry(fn, label = 'notion') {
     } catch (err) {
       lastErr = err;
       const msg = err?.message ?? '';
-      const transient = /ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|fetch failed|timed out|429|502|503|504|socket hang up/i.test(msg)
+      const isRateLimit = /rate limit/i.test(msg) || err?.status === 429;
+      const transient = isRateLimit
+        || /ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|fetch failed|timed out|502|503|504|socket hang up/i.test(msg)
         || err?.code === 'notionhq_client_request_timeout'
-        || err?.status >= 500
-        || err?.status === 429;
+        || err?.status >= 500;
       if (!transient || i === maxAttempts) throw err;
-      const delay = Math.min(30_000, 1000 * 2 ** (i - 1)) + Math.floor(Math.random() * 500);
+      const baseDelay = isRateLimit
+        ? Math.min(120_000, 5000 * 2 ** (i - 1))
+        : Math.min(30_000, 1000 * 2 ** (i - 1));
+      const delay = baseDelay + Math.floor(Math.random() * 1000);
       console.warn(`  ${label} retry ${i}/${maxAttempts - 1} after ${delay}ms: ${msg.slice(0, 100)}`);
       await new Promise((r) => setTimeout(r, delay));
     }

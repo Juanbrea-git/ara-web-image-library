@@ -70,7 +70,7 @@ async function main() {
   }
 
   const client = makeClient();
-  const limit = pLimit(3);
+  const limit = pLimit(Number(process.env.CONCURRENCY ?? 2));
   const log = [];
   let processed = 0;
   let succeeded = 0;
