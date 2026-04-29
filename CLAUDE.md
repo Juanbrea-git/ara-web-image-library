@@ -100,6 +100,7 @@ Created programmatically by `scripts/setup-notion-db.js`.
 | Original URL | URL | Source URL on reyeslaw.com |
 | Original Format | Select | `AVIF` · `PNG` · `JPEG` |
 | WebP URL | URL | `raw.githubusercontent.com/.../webp-library/...webp` |
+| Destination URL | URL | Page on reyeslaw.com where the image goes (primary page if it's used on multiple) |
 | Original Size (KB) | Number | |
 | WebP Size (KB) | Number | |
 | Reduction % | Number | `(1 − webp/original) × 100` |

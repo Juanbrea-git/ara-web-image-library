@@ -12,6 +12,7 @@ export const DB_PROPS = {
     ] },
   },
   'WebP URL': { url: {} },
+  'Destination URL': { url: {} },
   'Original Size (KB)': { number: { format: 'number' } },
   'WebP Size (KB)': { number: { format: 'number' } },
   'Reduction %': { number: { format: 'number' } },
@@ -42,6 +43,7 @@ export function rowToProperties({ filename, attachmentId, originalUrl, format, w
     .map((p) => `${p.pageTitle} — ${p.pageUrl}`)
     .join('\n')
     .slice(0, 1900);
+  const destinationUrl = pages?.[0]?.pageUrl ?? null;
 
   const props = {
     Filename: { title: [{ text: { content: String(filename ?? '').slice(0, 200) } }] },
@@ -49,6 +51,7 @@ export function rowToProperties({ filename, attachmentId, originalUrl, format, w
     'Original URL': { url: originalUrl ?? null },
     'Original Format': format ? { select: { name: format } } : { select: null },
     'WebP URL': { url: webpUrl ?? null },
+    'Destination URL': { url: destinationUrl },
     'Original Size (KB)': { number: originalSizeKb ?? null },
     'WebP Size (KB)': { number: webpSizeKb ?? null },
     'Reduction %': { number: reduction },
